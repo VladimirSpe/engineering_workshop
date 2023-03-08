@@ -65,13 +65,15 @@ class Var_edge:     #Класс для хранения ветвей графа 
 
 
 class Main_method:
-    def __init__(self, file_name):
-        # mat = Read_Json(file_name)
-        # ff = mat.preparation()            #Получение матрицы и индексов, нам нужна только матрица/ формат возвращаемого значения функции (self.matrix, self.indexes)
-        # matrix = np.array([i for i in range(np.shape(ff[0])[0] + 1)])         #Эти 3 строки ниже формируют столбец и строку с индексами, тоже желательно протестить
-        # mm = np.column_stack((np.array([np.array(i) for i in range(1, np.shape(ff[0])[0] + 1)]), ff[0]))
-        # self.matrix = np.vstack((matrix, mm))
-        self.matrix = np.array([[0, 1, 2, 3, 4, 5], [1, np.inf, 20, 18, 12, 8], [2, 5, np.inf, 14, 7, 11], [3, 12, 18, np.inf, 6, 11], [4, 11, 17, 11, np.inf, 12], [5, 5, 5, 5, 5, np.inf]])
+    def __init__(self, file_name, matrix):
+        if file_name == 0:
+            mat = Read_Json(file_name)
+            ff = mat.preparation()            #Получение матрицы и индексов, нам нужна только матрица/ формат возвращаемого значения функции (self.matrix, self.indexes)
+            matrix = np.array([i for i in range(np.shape(ff[0])[0] + 1)])         #Эти 3 строки ниже формируют столбец и строку с индексами, тоже желательно протестить
+            mm = np.column_stack((np.array([np.array(i) for i in range(1, np.shape(ff[0])[0] + 1)]), ff[0]))
+            self.matrix = np.vstack((matrix, mm))
+        else:
+            self.matrix = matrix
         self.h = 0
         self.answer = []    #Список с конечным ответом
         self.list_dangling_branches = []    #Список оборванных ветвей
@@ -144,5 +146,5 @@ class Main_method:
 
 
 if __name__ == "__main__":
-    m = Main_method("pp")
+    m = Main_method("pp", 0)
     m.solution_cycle()
