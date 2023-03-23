@@ -1,4 +1,5 @@
 import json
+import params
 
 
 class Read_Json:
@@ -26,10 +27,11 @@ class Read_Json:
             self.SVN_cords.append((id1_cords, id2_cords))
 
     def orientation(self, a, b, c):
-        """Check orientation: 
-        0 - collenary,
-        1- clockwise,
-        2 - counter-clockwise
+        """
+        Check orientation:
+                0 - collenary,
+                1- clockwise,
+                2 - counter-clockwise
         """
         t = (b[1] - a[1]) * (c[0] - b[0]) - (b[0] - a[0]) * (c[1] - b[1])
         if t == 0:
@@ -40,28 +42,44 @@ class Read_Json:
             return 2
 
     def check_intersection(self, sec1, sec2):
-        p1 = self.orientation(sec1[0], sec2[0], sec1[1]) != self.orientation(sec1[0], sec2[0], sec2[1])
-        p2 = self.orientation(sec1[1],sec2[1],sec2[0]) != self.orientation(sec1[1],sec2[1],sec1[0])
+        p1 = self.orientation(sec1[0], sec1[1], sec2[0]) != self.orientation(sec1[0], sec1[1], sec2[1])
+        p2 = self.orientation(sec2[0], sec2[1], sec1[0]) != self.orientation(sec2[0], sec2[1], sec1[1])
         if p1 and p2:
             return True
         return False
 
+    def check_w_SVN(self, point1, point2):
+        """Check intersection with SVN"""
+        for i in range(len(self.SVN_cords)):
+            x_SVN_1, y_SVN_1 = self.SVN_cords[i][0]
+            x_SVN_2, y_SVN_2 = self.SVN_cords[i][1]
+            if point1 == (x_SVN_1, y_SVN_1) or point1 == (x_SVN_2, y_SVN_2):
+                continue
+            if point2 == (x_SVN_1, y_SVN_1) or point2 == (x_SVN_2, y_SVN_2):
+                continue
+            if self.check_intersection((point1, point2), ((x_SVN_1, y_SVN_1), (x_SVN_2, y_SVN_2))) is True:
+                return True
+        return False
+
     def preparation(self):
         """Creating matrix"""
-        for k in range(len(self.SVN_cords)):
-            dz_point1 = self.SVN_cords[k][0]
-            dz_point2 = self.SVN_cords[k][1]
-            for i in range(len(self.data)):
-                m = []
-                x = self.data[i]["x"]
-                y = self.data[i]["y"]
-                for j in range(len(self.data)):
-                    if i != j and self.check_intersection((dz_point1, dz_point2), ((x, y), (self.data[j]["x"], self.data[j]["y"]))) != False:
-                        m.append(((x - self.data[j]["x"]) ** 2 + (y - self.data[j]["y"]) ** 2) ** 0.5)
-                    else:
-                        m.append(1e100)
-                self.matrix.append(m[:])
-            return self.matrix
+        self.find_cords_by_name()
+        for i in range(len(self.data)):
+            m = []
+            x1 = self.data[i]["x"]
+            y1 = self.data[i]["y"]
+            for j in range(len(self.data)):
+                x2 = self.data[j]["x"]
+                y2 = self.data[j]["y"]
+                if i != j and self.check_w_SVN((x1, y1), (x2, y2)) is False:
+                    m.append(((x1 - x2) ** 2 + (y1 - y2) ** 2) ** 0.5)
+                else:
+                    m.append(1e100)
+            self.matrix.append(m[:])
+        return self.matrix
 
     def get_matrix(self):
         return self.matrix
+
+
+
