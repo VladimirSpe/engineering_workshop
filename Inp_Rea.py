@@ -1,11 +1,10 @@
 import json
-import params
+import numpy as np
 
 
 class Read_Json:
     def __init__(self, file_name, file_SVN):
         """Read JSON files"""
-        self.matrix = []
         self.SVN_names = []
         self.SVN_cords = []
 
@@ -13,6 +12,8 @@ class Read_Json:
             self.SVN_names = json.load(f)
         with open(file_name) as f:
             self.data = json.load(f)
+
+        self.matrix = np.zeros((len(self.data), len(self.data)))
 
     def find_cords_by_name(self):
         """Danger Zone's JSON have only KT's id. This func get cords from id"""
@@ -65,21 +66,23 @@ class Read_Json:
         """Creating matrix"""
         self.find_cords_by_name()
         for i in range(len(self.data)):
-            m = []
             x1 = self.data[i]["x"]
             y1 = self.data[i]["y"]
             for j in range(len(self.data)):
                 x2 = self.data[j]["x"]
                 y2 = self.data[j]["y"]
                 if i != j and self.check_w_SVN((x1, y1), (x2, y2)) is False:
-                    m.append(((x1 - x2) ** 2 + (y1 - y2) ** 2) ** 0.5)
+                    self.matrix[i][j] = ((x1 - x2) ** 2 + (y1 - y2) ** 2) ** 0.5
+
                 else:
-                    m.append(1e100)
-            self.matrix.append(m[:])
+                    self.matrix[i][j] = np.inf
         return self.matrix
 
     def get_matrix(self):
         return self.matrix
 
 
-
+test1 = Read_Json(params.file_kt_1, params.file_zd_1)
+res = test1.preparation()
+for i in range(len(res)):
+    print(res[i])
