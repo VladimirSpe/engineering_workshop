@@ -3,6 +3,7 @@ import json
 
 class Read_Json:
     def __init__(self, file_name, file_SVN):
+        """Read JSON files"""
         self.matrix = []
         self.SVN_names = []
         self.SVN_cords = []
@@ -13,6 +14,7 @@ class Read_Json:
             self.data = json.load(f)
 
     def find_cords_by_name(self):
+        """Danger Zone's JSON have only KT's id. This func get cords from id"""
         for i in range(len(self.SVN_names)):
             id1_cords = (0, 0)
             id2_cords = (0, 0)
@@ -24,7 +26,11 @@ class Read_Json:
             self.SVN_cords.append((id1_cords, id2_cords))
 
     def orientation(self, a, b, c):
-
+        """Check orientation: 
+        0 - collenary,
+        1- clockwise,
+        2 - counter-clockwise
+        """
         t = (b[1] - a[1]) * (c[0] - b[0]) - (b[0] - a[0]) * (c[1] - b[1])
         if t == 0:
             return 0
@@ -41,6 +47,7 @@ class Read_Json:
         return False
 
     def preparation(self):
+        """Creating matrix"""
         for k in range(len(self.SVN_cords)):
             dz_point1 = self.SVN_cords[k][0]
             dz_point2 = self.SVN_cords[k][1]
