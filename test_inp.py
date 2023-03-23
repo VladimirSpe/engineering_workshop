@@ -1,15 +1,19 @@
 from Inp_Rea import Read_Json
 import params
 
-class TestBasicOperations:
 
-    def test_first_step_easy(self):
-        test1 = Basic_methods(params.arr1.copy())
-        mat1, H1 = test1.first_step()
-        assert params.equal_matrix(mat1, params.res1[0])
-        assert H1 == params.res1[1]
+class TestReadJson:
 
-        test2 = Basic_methods(params.arr2.copy())
-        mat2, H2 = test2.first_step()
-        assert params.equal_matrix(mat2, params.res2[0])
-        assert H2 == params.res2[1]
+    def test_initialize(self):
+        test1 = Read_Json(params.file_kt_1, params.file_zd_1)
+        test1.find_cords_by_name()
+        assert test1.SVN_cords == params.res_file
+
+    def test_check_intersection(self):
+        test2 = Read_Json(params.file_kt_1, params.file_zd_1)
+        assert test2.check_intersection(params.arr15[0], params.arr15[1])
+
+    def test_all(self):
+        test1 = Read_Json(params.file_kt_1, params.file_zd_1)
+        res = test1.preparation()
+        assert params.equal_matrix(res, params.res15)
