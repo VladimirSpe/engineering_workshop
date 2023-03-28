@@ -1,24 +1,27 @@
-from Inp_Rea import Read_Json
+from Littles_method import Main_method
 import matplotlib.pyplot as plt
+import json
+from Inp_Rea import Read_Json
 
 
-def index_to_coord(vector_list, ind):
-    coord_list_x = []
-    coord_list_y = []
-    for i in vector_list:
-        coord_list_x.append(ind[i[0]][1])
-        coord_list_y.append(ind[i[0]][2])
-    coord_list_x.append(ind[vector_list[0][0]][1])
-    coord_list_y.append(ind[vector_list[0][0]][2])
-    return coord_list_x, coord_list_y
+def index_to_coord(data, points):
+    l_x = []
+    l_y = []
+    for i in range(len(points)):
+        for j in range(len(data)):
+
+            if points[i][0] == data[j]["id"]:
+                l_x.append([data[j]["x"], data[j]["y"]])
+            if points[i][1] == data[j]["id"]:
+                l_y.append((data[j]["x"], data[j]["y"]))
+    return l_x, l_y
 
 
 def main():
-    mat = Read_Json("inp.json")
-    ff = mat.preparation()
-    coords = [(0, 2), (2, 1), (1, 0)]
-    matrix, indexes = ff[0], ff[1]
-    l_x, l_y = index_to_coord(coords, indexes)
+    file = Read_Json("file_kt_1.json", "")
+    mat = Main_method(1, file.preparation())
+    coords = mat.solution_cycle()[0]
+    l_x, l_y = index_to_coord(file.data, coords)
     plt.plot(l_x, l_y)
     plt.show()
 
