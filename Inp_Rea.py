@@ -1,5 +1,6 @@
 import json
 import numpy as np
+import params
 
 
 class Read_Json:
@@ -7,9 +8,9 @@ class Read_Json:
         """Read JSON files"""
         self.SVN_names = []
         self.SVN_cords = []
-
-        with open(file_SVN) as f:
-            self.SVN_names = json.load(f)
+        if file_SVN != "":
+            with open(file_SVN) as f:
+                self.SVN_names = json.load(f)
         with open(file_name) as f:
             self.data = json.load(f)
 
@@ -31,7 +32,7 @@ class Read_Json:
         """
         Check orientation:
                 0 - collenary,
-                1- clockwise,
+                1-  clockwise,
                 2 - counter-clockwise
         """
         t = (b[1] - a[1]) * (c[0] - b[0]) - (b[0] - a[0]) * (c[1] - b[1])
@@ -68,21 +69,17 @@ class Read_Json:
         for i in range(len(self.data)):
             x1 = self.data[i]["x"]
             y1 = self.data[i]["y"]
-            for j in range(len(self.data)):
+            self.matrix[i][i] = np.inf
+            for j in range(0, i):
                 x2 = self.data[j]["x"]
                 y2 = self.data[j]["y"]
-                if i != j and self.check_w_SVN((x1, y1), (x2, y2)) is False:
+                if self.check_w_SVN((x1, y1), (x2, y2)) is False:
                     self.matrix[i][j] = ((x1 - x2) ** 2 + (y1 - y2) ** 2) ** 0.5
-
+                    self.matrix[j][i] = ((x1 - x2) ** 2 + (y1 - y2) ** 2) ** 0.5
                 else:
                     self.matrix[i][j] = np.inf
+                    self.matrix[j][i] = np.inf
         return self.matrix
 
     def get_matrix(self):
         return self.matrix
-
-
-test1 = Read_Json(params.file_kt_1, params.file_zd_1)
-res = test1.preparation()
-for i in range(len(res)):
-    print(res[i])
