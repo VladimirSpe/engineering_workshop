@@ -1,6 +1,7 @@
 import json
 import numpy as np
 import params
+import math
 
 
 class Read_Json:
@@ -13,11 +14,11 @@ class Read_Json:
                 self.SVN_names = json.load(f)
         with open(file_name) as f:
             self.data = json.load(f)
-
+        self.circles = []
         self.matrix = np.zeros((len(self.data), len(self.data)))
 
+    """
     def find_cords_by_name(self):
-        """Danger Zone's JSON have only KT's id. This func get cords from id"""
         for i in range(len(self.SVN_names)):
             id1_cords = (0, 0)
             id2_cords = (0, 0)
@@ -27,6 +28,7 @@ class Read_Json:
                 if self.SVN_names[i]["id2"] == self.data[j]["id"]:
                     id2_cords = (self.data[j]["x"], self.data[j]["y"])
             self.SVN_cords.append((id1_cords, id2_cords))
+    """
 
     def orientation(self, a, b, c):
         """
@@ -50,18 +52,41 @@ class Read_Json:
             return True
         return False
 
-    def check_w_SVN(self, point1, point2):
+    def check_w_SVN(self, id1, id2):
         """Check intersection with SVN"""
-        for i in range(len(self.SVN_cords)):
-            x_SVN_1, y_SVN_1 = self.SVN_cords[i][0]
-            x_SVN_2, y_SVN_2 = self.SVN_cords[i][1]
-            if point1 == (x_SVN_1, y_SVN_1) or point1 == (x_SVN_2, y_SVN_2):
-                continue
-            if point2 == (x_SVN_1, y_SVN_1) or point2 == (x_SVN_2, y_SVN_2):
-                continue
-            if self.check_intersection((point1, point2), ((x_SVN_1, y_SVN_1), (x_SVN_2, y_SVN_2))) is True:
+        for i in range(len(self.SVN_names)):
+            if (id1 == self.SVN_names[i][0] and id2 == self.SVN_names[i][1]) or (
+                    id1 == self.SVN_names[i][1] and id2 == self.SVN_names[i][0]):
                 return True
         return False
+
+    def check_w_circle(self, point1, point2):
+        """Check intersection with Сircles"""
+        A_x, A_y = point1
+        B_x, B_y = point2
+        for i in self.circles:
+            # vert_x, vert_y = i["x"], i["y"]
+            r = i["r"]
+            b = 2 * (A_x(B_x - A_x) + A_y(B_y - A_y))
+            a = ((B_x - A_x) ** 2 + (B_y - A_y) ** 2)
+            c = (A_x ** 2 + A_y ** 2 - r ** 2)
+            D = b ** 2 - 4 * a * c
+            if D >= 0:
+                return True
+            else:
+                return False
+
+    def build_tangent(self, point, point_circle, R):
+        A_x, A_y = point
+        C_x, C_y = point_circle
+        l_x = C_x - A_x
+        l_y = C_y - A_y
+        l = (l_x ** 2 + l_y ** 2) ** 0.5
+        T1_x = R * math.sin(math.atan2(l_y, l_x) ** 2 - math.asin(R / l)) + C_x
+        T1_y = R * (-math.cos(math.atan2(l_y, l_x) ** 2 - math.asin(R / l))) + C_y
+        T2_x = R * (-math.sin(math.atan2(l_y, l_x) ** 2 - math.asin(R / l))) + C_x
+        T2_y = R * (math.cos(math.atan2(l_y, l_x) ** 2 - math.asin(R / l))) + C_y
+        return (T1_x, T1_y), (T2_x, T2_y), l
 
     def preparation(self):
         """Creating matrix"""
@@ -69,11 +94,14 @@ class Read_Json:
         for i in range(len(self.data)):
             x1 = self.data[i]["x"]
             y1 = self.data[i]["y"]
+            id1 = self.data[i]["id"]
             self.matrix[i][i] = np.inf
             for j in range(0, i):
                 x2 = self.data[j]["x"]
                 y2 = self.data[j]["y"]
-                if self.check_w_SVN((x1, y1), (x2, y2)) is False:
+                id2 = self.data[j]["id"]
+
+                if self.check_w_SVN(id1, id2) is False:
                     self.matrix[i][j] = ((x1 - x2) ** 2 + (y1 - y2) ** 2) ** 0.5
                     self.matrix[j][i] = ((x1 - x2) ** 2 + (y1 - y2) ** 2) ** 0.5
                 else:
@@ -83,3 +111,4 @@ class Read_Json:
 
     def get_matrix(self):
         return self.matrix
+
