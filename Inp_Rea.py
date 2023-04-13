@@ -5,17 +5,17 @@ import math
 
 
 class Read_Json:
-    def __init__(self, file_name, file_SVN):
+    def __init__(self, file_name):
         """Read JSON files"""
-        self.SVN_names = []
-        self.SVN_cords = []
-        if file_SVN != "":
-            with open(file_SVN) as f:
-                self.SVN_names = json.load(f)
+
         with open(file_name) as f:
             self.data = json.load(f)
-        self.circles = []
-        self.matrix = np.zeros((len(self.data), len(self.data)))
+        self.KT = self.data["data_points"]
+        self.SVN_names = self.data["forbidden_lines"]
+        self.circles = self.data["data_forbidden_zone"]
+        self.matrix = np.zeros((len(self.KT), len(self.KT)))
+        # paths[i] = [id1, id2, mode, ...]
+        self.paths = []
 
     """
     def find_cords_by_name(self):
@@ -55,8 +55,8 @@ class Read_Json:
     def check_w_SVN(self, id1, id2):
         """Check intersection with SVN"""
         for i in range(len(self.SVN_names)):
-            if (id1 == self.SVN_names[i][0] and id2 == self.SVN_names[i][1]) or (
-                    id1 == self.SVN_names[i][1] and id2 == self.SVN_names[i][0]):
+            if (id1 == self.SVN_names[i]["id1"] and id2 == self.SVN_names[i]["id2"]) or (
+                    id1 == self.SVN_names[i]["id2"] and id2 == self.SVN_names[i]["id1"]):
                 return True
         return False
 
@@ -65,14 +65,14 @@ class Read_Json:
         A_x, A_y = point1
         B_x, B_y = point2
         for i in self.circles:
-            # vert_x, vert_y = i["x"], i["y"]
+            vert_x, vert_y = i["x"], i["y"]
             r = i["r"]
-            b = 2 * (A_x(B_x - A_x) + A_y(B_y - A_y))
+            b = 2 * (A_x * (B_x - A_x) + A_y * (B_y - A_y))
             a = ((B_x - A_x) ** 2 + (B_y - A_y) ** 2)
             c = (A_x ** 2 + A_y ** 2 - r ** 2)
             D = b ** 2 - 4 * a * c
             if D >= 0:
-                return True
+                return True, (vert_x, vert_y), r
             else:
                 return False
 
@@ -88,27 +88,69 @@ class Read_Json:
         T2_y = R * (math.cos(math.atan2(l_y, l_x) ** 2 - math.asin(R / l))) + C_y
         return (T1_x, T1_y), (T2_x, T2_y), l
 
+    def calculate_arc_length(self, point1, point2, r):
+        a = ((point1[0] - point2[0]) ** 2 + (point1[1] - point2[1]) ** 2) ** 0.5
+        return 2 * r * math.asin(a / (2 * r))
+
+    def build_circle_detour(self, point1, point2, circle_point, r):
+        tangents1 = self.build_tangent(point1, circle_point, r)
+        tangents2 = self.build_tangent(point2, circle_point, r)
+        arc11 = self.calculate_arc_length(tangents1[0], tangents2[0], r)
+        arc12 = self.calculate_arc_length(tangents1[0], tangents2[1], r)
+        arc21 = self.calculate_arc_length(tangents1[1], tangents2[0], r)
+        arc22 = self.calculate_arc_length(tangents1[1], tangents2[1], r)
+        way1 = tangents1[2] + tangents2[2] + arc11
+        way2 = tangents1[2] + tangents2[2] + arc12
+        way3 = tangents1[2] + tangents2[2] + arc21
+        way4 = tangents1[2] + tangents2[2] + arc22
+        min_way = min(way1, way2, way3, way4)
+
+        if way1 == min_way:
+            return tangents1[0], tangents2[0], way1
+        if way2 == min_way:
+            return tangents1[0], tangents2[1], way2
+        if way3 == min_way:
+            return tangents1[1], tangents2[0], way3
+        if way4 == min_way:
+            return tangents1[1], tangents2[1], way4
+
     def preparation(self):
         """Creating matrix"""
-        self.find_cords_by_name()
-        for i in range(len(self.data)):
-            x1 = self.data[i]["x"]
-            y1 = self.data[i]["y"]
-            id1 = self.data[i]["id"]
+        ids = [0]
+        for i in range(len(self.KT)):
+            x1 = self.KT[i]["x"]
+            y1 = self.KT[i]["y"]
+            id1 = self.KT[i]["id"]
             self.matrix[i][i] = np.inf
+            ids.append(id1)
             for j in range(0, i):
-                x2 = self.data[j]["x"]
-                y2 = self.data[j]["y"]
-                id2 = self.data[j]["id"]
-
-                if self.check_w_SVN(id1, id2) is False:
+                x2 = self.KT[j]["x"]
+                y2 = self.KT[j]["y"]
+                id2 = self.KT[j]["id"]
+                p1 = self.check_w_SVN(id1, id2)
+                p2 = self.check_w_circle((x1, y1), (x2, y2))
+                if p1 is False and p2 is False:
                     self.matrix[i][j] = ((x1 - x2) ** 2 + (y1 - y2) ** 2) ** 0.5
                     self.matrix[j][i] = ((x1 - x2) ** 2 + (y1 - y2) ** 2) ** 0.5
-                else:
+                    # [id1, id2, mod, p1, p2]
+                    self.paths.append([id1, id2, "line", (x1, y1), (x2, y2)])
+                elif p1 is True:
                     self.matrix[i][j] = np.inf
                     self.matrix[j][i] = np.inf
+                elif p2[0] is True:
+                    dot1, dot2, S = self.build_circle_detour((x1, y1), (x2, y2), p2[1], p2[2])
+                    self.matrix[i][j] = S
+                    self.matrix[j][i] = S
+                    # [id1, id2, mode, point1, point2, point_tangent1, point_tangent2, circle_point, r_circle]
+                    self.paths.append([id1, id2, "circle", (x1, y1), (x2, y2), dot1, dot2, p2[1], p2[2]])
+        self.matrix = np.vstack([np.array(ids)[1:], self.matrix])
+        ids = np.array(ids).reshape(len(ids), 1)
+        self.matrix = np.hstack([ids, self.matrix])
+
         return self.matrix
 
     def get_matrix(self):
         return self.matrix
+
+
 
