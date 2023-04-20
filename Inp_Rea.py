@@ -3,7 +3,6 @@ import numpy as np
 import params
 import math
 
-
 class Read_Json:
     def __init__(self, file_name):
         """Read JSON files"""
@@ -60,21 +59,33 @@ class Read_Json:
                 return True
         return False
 
-    def check_w_circle(self, point1, point2):
-        """Check intersection with Сircles"""
-        A_x, A_y = point1
-        B_x, B_y = point2
+    def check_w_circle(self, A, B):
+        # Сдвинем отрезок и окружность так, чтобы центр окружности был в (0, 0)
         for i in self.circles:
-            vert_x, vert_y = i["x"], i["y"]
-            r = i["r"]
-            b = 2 * (A_x * (B_x - A_x) + A_y * (B_y - A_y))
-            a = ((B_x - A_x) ** 2 + (B_y - A_y) ** 2)
-            c = (A_x ** 2 + A_y ** 2 - r ** 2)
-            D = b ** 2 - 4 * a * c
-            if D >= 0:
-                return True, (vert_x, vert_y), r
+            C = (i["x"], i["y"])
+            R = i["r"]
+            Ax, Ay = A[0] - C[0], A[1] - C[1]
+            Bx, By = B[0] - C[0], B[1] - C[1]
+
+            # Вычислим коэффициенты квадратного уравнения
+            a = (Bx - Ax) ** 2 + (By - Ay) ** 2
+            b = 2 * (Ax * (Bx - Ax) + Ay * (By - Ay))
+            c = Ax ** 2 + Ay ** 2 - R ** 2
+
+            # Вычислим дискриминант
+            d = b ** 2 - 4 * a * c
+
+            # Проверим наличие корней
+            if d < 0:
+                return False  # Нет корней, нет пересечения
+
+            # Найдем точки пересечения
+            t1 = (-b - sqrt(d)) / (2 * a)
+            t2 = (-b + sqrt(d)) / (2 * a)
+            if 0 <= t1 <= 1 or 0 <= t2 <= 1:
+                return True, C, R  # Есть хотя бы одна точка пересечения
             else:
-                return False
+                return False  # Нет точек пересечения внутри отрезка
 
     def build_tangent(self, point, point_circle, R):
         A_x, A_y = point
@@ -82,15 +93,23 @@ class Read_Json:
         l_x = C_x - A_x
         l_y = C_y - A_y
         l = (l_x ** 2 + l_y ** 2) ** 0.5
-        T1_x = R * math.sin(math.atan2(l_y, l_x) ** 2 - math.asin(R / l)) + C_x
-        T1_y = R * (-math.cos(math.atan2(l_y, l_x) ** 2 - math.asin(R / l))) + C_y
-        T2_x = R * (-math.sin(math.atan2(l_y, l_x) ** 2 - math.asin(R / l))) + C_x
-        T2_y = R * (math.cos(math.atan2(l_y, l_x) ** 2 - math.asin(R / l))) + C_y
+        T1_x = R * sin(atan2(l_y, l_x) - asin(R / l)) + C_x
+        T1_y = R * (-cos(atan2(l_y, l_x) - asin(R / l))) + C_y
+        T2_x = R * (-sin(atan2(l_y, l_x) + asin(R / l))) + C_x
+        T2_y = R * (cos(atan2(l_y, l_x) + asin(R / l))) + C_y
         return (T1_x, T1_y), (T2_x, T2_y), l
 
     def calculate_arc_length(self, point1, point2, r):
         a = ((point1[0] - point2[0]) ** 2 + (point1[1] - point2[1]) ** 2) ** 0.5
-        return 2 * r * math.asin(a / (2 * r))
+        return 2 * r * asin(a / (2 * r))
+
+    def arc_length(self, center, radius, point1, point2):
+        L = ((point1[0] - point2[0]) ** 2 + (point1[1] - point2[1]) ** 2) ** 0.5
+        alpha = acos(1 - ((L ** 2) / (2 * (radius ** 2))))
+        print(L)
+        print(1 - ((L ** 2) / (2 * (radius ** 2))))
+        print(alpha)
+        return radius * alpha
 
     def build_circle_detour(self, point1, point2, circle_point, r):
         tangents1 = self.build_tangent(point1, circle_point, r)
