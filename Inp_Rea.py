@@ -1,4 +1,6 @@
 import json
+import math
+
 import numpy as np
 import params
 from math import atan2, acos, sin, cos, sqrt, asin
@@ -23,12 +25,12 @@ class LineTour:
 
 
 class CircleTour:
-    def __init__(self, id1, id2):
+    def __init__(self, id1_p, id2_p):
         self.tang1 = (0, 0)
         self.tang2 = (0, 0)
         self.L = 0
-        self.id1 = id1
-        self.id2 = id2
+        self.id1_p = id1_p
+        self.id2_p = id2_p
         self.center = (0, 0)
         self.r = 0
 
@@ -75,14 +77,16 @@ class CircleTour:
         T2_y = R * (cos(atan2(l_y, l_x) + asin(R / l))) + C_y
         return (T1_x, T1_y), (T2_x, T2_y), l
 
-    def arc_length(self, point1, point2, radius):
+    def angle_btw_points(self, point1, point2, radius):
         L = ((point1[0] - point2[0]) ** 2 + (point1[1] - point2[1]) ** 2) ** 0.5
         alpha = acos(1 - ((L ** 2) / (2 * (radius ** 2))))
-        return radius * alpha
+        return alpha
+
+    def arc_length(self, point1, point2, radius):
+        return radius * self.angle_btw_points(point1, point2, radius)
 
     def get_length(self):
         return self.L
-
     def draw(self, ax):
         angle1 = np.arctan2(self.tang1[1] - self.center[1], self.tang1[0] - self.center[0])
         angle2 = np.arctan2(self.tang2[1] - self.center[1], self.tang2[0] - self.center[0])
@@ -91,7 +95,15 @@ class CircleTour:
         arc_length = self.r * np.abs(angle2 - angle1)
 
         # создаем объект дуги
-        arc = Arc(self.center, 2 * self.r, 2 * self.r, angle=0, theta1=np.degrees(angle1), theta2=np.degrees(angle2))
+        arc = Arc(self.center, 2 * self.r, 2 * self.r, angle=0, theta1=min(np.degrees(angle1), np.degrees(angle2)), theta2=max(np.degrees(angle1), np.degrees(angle2)),
+                  color="green")
+
+        ax.add_patch(arc)
+        line1 = matplotlib.patches.Polygon([self.id1_p, self.tang1], fill=False, closed=False, color="green")
+        line2 = matplotlib.patches.Polygon([self.id2_p, self.tang2], fill=False, closed=False, color="green")
+
+        ax.add_patch(line1)
+        ax.add_patch(line2)
 
 
 class Read_Json:
@@ -160,13 +172,14 @@ class Read_Json:
             c = Ax ** 2 + Ay ** 2 - R ** 2
             d = b ** 2 - 4 * a * c
             if d < 0:
-                return False
+                continue
             t1 = (-b - sqrt(d)) / (2 * a)
             t2 = (-b + sqrt(d)) / (2 * a)
             if 0 <= t1 <= 1 or 0 <= t2 <= 1:
                 return True, C, R
             else:
-                return False
+                continue
+        return False
 
     def preparation(self):
         """Creating matrix"""
@@ -188,20 +201,22 @@ class Read_Json:
                     self.matrix[i][j] = line.get_length()
                     self.matrix[j][i] = line.get_length()
                     self.path_matrix[i][j] = line
-                    self.path_matrix[j][i] = None
+                    self.path_matrix[j][i] = line
                 elif p1 is True:
                     self.matrix[i][j] = np.inf
                     self.matrix[j][i] = np.inf
                 elif p2[0] is True:
-                    circ = CircleTour(id1, id2)
+                    circ = CircleTour((x1, y1), (x2, y2))
                     circ.build_circle_detour((x1, y1), (x2, y2), p2[1], p2[2])
                     S = circ.get_length()
                     self.matrix[i][j] = S
                     self.matrix[j][i] = S
                     self.path_matrix[i][j] = circ
-                    self.path_matrix[j][i] = None
+                    self.path_matrix[j][i] = circ
+        self.path_matrix = np.vstack([np.array(ids)[1:], self.path_matrix])
         self.matrix = np.vstack([np.array(ids)[1:], self.matrix])
         ids = np.array(ids).reshape(len(ids), 1)
+        self.path_matrix = np.hstack([ids, self.path_matrix])
         self.matrix = np.hstack([ids, self.matrix])
 
         return self.matrix
