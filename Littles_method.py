@@ -1,13 +1,15 @@
+import json
+from typing import *
 import numpy as np
 import logging
 from Inp_Rea import Read_Json
 
 
 class Basic_methods:
-    def __init__(self, matrix):
+    def __init__(self, matrix: np.array):
         self.matrix = matrix
 
-    def reduction(self):
+    def reduction(self) -> Tuple[np.array, int]:
         """Поиск минимумов и удаление их"""
 
         f = np.amin(self.matrix[1:, 1:], keepdims=True, axis=1)
@@ -17,8 +19,10 @@ class Basic_methods:
         h = np.sum(f) + np.sum(f2)
         return np.copy(self.matrix), h
 
-    def zero_rating(self):
-        """Функция, реализующая подсчет весов нулей"""
+    def zero_rating(self) -> Tuple[int, int, int, int]:
+        """Функция, реализующая подсчет весов нулей
+           Первые два значения - координаты в стандартном массиве
+           Вторые два - координаты в массиве в данной итерации"""
 
         x, y = np.where(self.matrix[1:, 1:] == 0)
         m = self.matrix[1:, 1:]
@@ -37,7 +41,6 @@ class Basic_methods:
         #     row_min = min(row_min1, row_min2)
         #     st_min = min(str_min1, str_min2)
         #     d[(int(self.matrix[1:, 0][x[i]]), int(self.matrix[0][1:][y[i]]), x[i], y[i])] = row_min + st_min
-        print(f"Zero: {sorted(d, key=lambda k: d[k], reverse=True)}")
         return sorted(d, key=lambda k: d[k], reverse=True)[0]
 
 
@@ -45,11 +48,11 @@ class Var_edge:
     """Класс для хранения ветвей графа (matrix - Полученная матрица перед дейстивем с графом, h - вес предыдущей мартицы,
      coord_edge - координаты графа, f - флаг, добавили или удалили граф)"""
 
-    def __init__(self, matrix: np.array, h: int, coord_edge, f: bool):
+    def __init__(self, matrix: np.array, h: int, coord_edge: tuple, f: bool):
         self.h = 0
         self.matrix, self.hh, self.coord_edge, self.f = matrix, h, coord_edge, f
 
-    def include_edge_graph(self):
+    def include_edge_graph(self) -> NoReturn:
         """Добавление ветви"""
 
         if self.coord_edge[0] in self.matrix[0] and self.coord_edge[1] in self.matrix[1:, 0]:
@@ -60,13 +63,13 @@ class Var_edge:
         self.matrix = np.delete(self.matrix, self.coord_edge[3] + 1, axis=1)
         self.prep()
 
-    def exclude_edge_graph(self):
+    def exclude_edge_graph(self) -> NoReturn:
         """Удаление ветви"""
 
         self.matrix[self.coord_edge[2] + 1][self.coord_edge[3] + 1] = np.inf
         self.prep()
 
-    def prep(self):
+    def prep(self) -> NoReturn:
         """Функция для просчета H после удаления или добавления"""
 
         m, self.h = Basic_methods(self.matrix).reduction()
@@ -79,35 +82,49 @@ class Var_edge:
         return self.h < other.h
 
 
-class Main_method:
-    def __init__(self, file_name, matrix):
-
-        if file_name == 0:
+class Main_Method:
+    def __init__(self, file_name: str, matrix: np.array, aeroport_id: int, number_bpla: int=1):
+        if len(file_name) != 0:
             mat = Read_Json(file_name)
-            ff = mat.preparation()
+            ff, self.id = mat.preparation()
             matrix = np.array([i for i in range(np.shape(ff[0])[0] + 1)])
             mm = np.column_stack((np.array([np.array(i) for i in range(1, np.shape(ff[0])[0] + 1)]), ff[0]))
             self.matrix = np.vstack((matrix, mm))
         else:
             self.matrix = matrix
+        if number_bpla > 1:
+            #start_coord = self.id[aeroport_id]
+            start_coord = aeroport_id
+            self.matrix = self.upd_matr_bpla(self.matrix, start_coord, number_bpla)
         self.h = 0
         self.answer = []  # Список с конечным ответом
         self.list_dangling_branches = []  # Список оборванных ветвей
         self.solution = []  # Решение для каждого ребенка дерева
 
-    def solution_cycle(self):
+    def upd_matr_bpla(self, matrix: np.array, start_coord: int, number_bpla: int) -> np.array:
+        m = matrix[:]
+        r = m[:, start_coord]
+        for i in range(number_bpla - 1):
+            m = np.column_stack((m, r))
+        for i in range(number_bpla - 1):
+            m = np.vstack([m, m[start_coord]])
+        return m[:]
+
+    def solution_cycle(self) -> Tuple[list, int]:
         """Основной цикл"""
 
         while np.shape(self.matrix)[0] != 3:
             base = Basic_methods(self.matrix)
             matr, h = base.reduction()
+            print(matr)
             coord_edge = base.zero_rating()
             inc = Var_edge(matr.copy(), h if len(self.solution) == 0 else self.solution[-1].h, coord_edge, True)  # Маршрут с добавлением графа
             inc.include_edge_graph()
             ex = Var_edge(matr.copy(), h if len(self.solution) == 0 else self.solution[-1].h, coord_edge, False)  # Маршрут с удалением графа
             ex.exclude_edge_graph()
             self.choosing_path(inc, ex)
-        mat, self.h = Basic_methods(self.matrix).reduction()  # Формирование ответа после получения матрицы 2х2
+
+        mat, self.h = Basic_methods(self.matrix).reduction()
         self.h += self.solution[-1].h
         self.solution.append(
             Var_edge(self.matrix, self.h + self.solution[-1].h, (self.matrix[:, 0][-1], self.matrix[0][1]), True))
@@ -118,8 +135,9 @@ class Main_method:
                 self.answer.append(i.coord_edge[:2])
         return self.answer, self.h
 
-    def choosing_path(self, inc, ex):
+    def choosing_path(self, inc, ex) -> NoReturn:
         """Функция для выбора оптимального дерева (с графом или без)"""
+
         if inc <= ex:
             if self.checking_past_paths(inc, ex):
                 self.list_dangling_branches.append([ex, self.solution[:]])
@@ -133,7 +151,7 @@ class Main_method:
             self.matrix = inc.matrix.copy()
             self.h = inc.h
 
-    def checking_past_paths(self, cl, cl1):
+    def checking_past_paths(self, cl, cl1) -> bool:
         """Проверка на оптимальность в оборванных ветвях"""
 
         for i in range(len(self.list_dangling_branches)):
@@ -154,13 +172,11 @@ if __name__ == "__main__":
     logging.basicConfig(filename="dd.log", filemode="w")
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
-    mat = np.array([[0, 1, 2, 3, 4, 5, 6],
-                  [1, np.inf, 10, 15, 11, 2, 55],
-                  [2, 17, np.inf, 16, 18, 21, 13],
-                  [3, 10, 50, np.inf, 39, 22, 3],
-                  [4, 28, 29, 24, np.inf, 28, 25],
-                  [5, 27, 9, 32, 9, np.inf, 2],
-                  [6, 43, 48, 40, 43, 21, np.inf]])
-    m = Main_method(1, mat)
+    mat = np.array([[0, 1, 2, 3, 4],
+                    [1, np.inf, 5, 5, np.sqrt(10)],
+                    [2, 5, np.inf, np.sqrt(20), np.sqrt(5)],
+                    [3, 5, np.sqrt(20), np.inf, 3],
+                    [4, np.sqrt(10), np.sqrt(5), 3, np.inf]])
+    m = Main_Method("", mat, 4, 3)
     print(m.solution_cycle())
 
