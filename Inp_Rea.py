@@ -1,21 +1,19 @@
 import json
-import math
-from abc import abstractmethod
+from abc import abstractmethod, ABC
 
 import numpy as np
-import params
 from math import atan2, acos, sin, cos, sqrt, asin
 from matplotlib.patches import Circle, Arc
 import matplotlib.patches
 
 
-class Tour:
+class Tour(ABC):
     def __init__(self):
-        self.L = 0
+        pass
 
     @abstractmethod
     def get_length(self):
-        return self.L
+        pass
 
     @abstractmethod
     def draw(self, ax):
@@ -30,6 +28,10 @@ class LineTour(Tour):
         self.L = ((p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2) ** 0.5
         self.id1 = id1
         self.id2 = id2
+
+    def get_length(self):
+        super().get_length()
+        return self.L
 
     def draw(self, ax):
         super().draw(ax)
@@ -98,6 +100,10 @@ class CircleTour(Tour):
 
     def arc_length(self, point1, point2, radius):
         return radius * self.angle_btw_points(point1, point2, radius)
+
+    def get_length(self):
+        super().get_length()
+        return self.L
 
     def draw(self, ax):
         super().draw(ax)
@@ -197,20 +203,22 @@ class Read_Json:
 
     def preparation(self):
         """Creating matrix"""
-        ids = [0]
+        ids = list(range(0, len(self.matrix[0])+1))
         for i in range(len(self.KT)):
             x1 = self.KT[i]["x"]
             y1 = self.KT[i]["y"]
             id1 = self.KT[i]["id"]
             self.matrix[i][i] = np.inf
-            ids.append(id1)
+            #ids.append(id1)
             for j in range(0, i):
+                #print(self.matrix)
                 x2 = self.KT[j]["x"]
                 y2 = self.KT[j]["y"]
                 id2 = self.KT[j]["id"]
                 p1 = self.check_w_SVN(id1, id2)
                 p2 = self.check_w_circle((x1, y1), (x2, y2))
                 if p1 is False and p2 is False:
+
                     line = LineTour(id1, id2, (x1, y1), (x2, y2))
                     self.matrix[i][j] = line.get_length()
                     self.matrix[j][i] = line.get_length()
@@ -227,10 +235,11 @@ class Read_Json:
                     self.matrix[j][i] = S
                     self.path_matrix[i][j] = circ
                     self.path_matrix[j][i] = circ
-        # self.path_matrix = np.vstack([np.array(ids)[1:], self.path_matrix])
+
+        self.path_matrix = np.vstack([np.array(ids)[1:], self.path_matrix])
         self.matrix = np.vstack([np.array(ids)[1:], self.matrix])
         ids = np.array(ids).reshape(len(ids), 1)
-        # self.path_matrix = np.hstack([ids, self.path_matrix])
+        self.path_matrix = np.hstack([ids, self.path_matrix])
         self.matrix = np.hstack([ids, self.matrix])
 
         return self.matrix
@@ -255,3 +264,6 @@ class Read_Json:
 
     def get_matrix(self):
         return self.matrix
+
+
+
