@@ -241,3 +241,10 @@ class Read_Json:
 
         def get_matrix(self):
             return self.matrix
+
+
+arr21 = [(100.100101, 13.100101), (0, 0)]
+res21 = True
+test1 = Read_Json("file_kt_1.json")
+
+print(test1.check_w_circle(arr21[0], arr21[1]))
