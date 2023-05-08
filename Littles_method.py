@@ -1,8 +1,6 @@
-import json
 import re
 from typing import *
 import numpy as np
-import logging
 from Inp_Rea import Read_Json
 
 
@@ -34,14 +32,6 @@ class Basic_methods:
             row_min = row_sort[1]
             str_min = str_sort[1]
             d[(int(self.matrix[1:, 0][x[i]]), int(self.matrix[0][1:][y[i]]), x[i], y[i])] = row_min + str_min
-        # for i in range(len(x)):
-        #     str_min1 = np.min(m[x[i], :][:y[i]]) if len(m[x[i], :][:y[i]]) != 0 else np.inf
-        #     str_min2 = np.min(m[x[i], 1:][y[i]:]) if len(m[x[i], 1:][y[i]:]) != 0 else np.inf
-        #     row_min1 = np.min(m[:, y[i]][:x[i]]) if len(m[:, y[i]][:x[i]]) != 0 else np.inf
-        #     row_min2 = np.min(m[:, y[i]][x[i] + 1:]) if len(m[:, y[i]][x[i] + 1:]) != 0 else np.inf
-        #     row_min = min(row_min1, row_min2)
-        #     st_min = min(str_min1, str_min2)
-        #     d[(int(self.matrix[1:, 0][x[i]]), int(self.matrix[0][1:][y[i]]), x[i], y[i])] = row_min + st_min
         return sorted(d, key=lambda k: d[k], reverse=True)[0]
 
 
@@ -190,7 +180,9 @@ class Main_Method:
             if i.f:
                 self.answer.append(i.coord_edge[:2])
         if self.number_bpla > 1:
-            self.mtsp_answer(self.answer)
+            self.answer = self.mtsp_answer(self.answer)
+        else:
+            self.answer = list(map(lambda x: [x[0], x[1]], self.answer))
 
     def test_an(self, ans: np.array, size: int) -> bool:
         """Проверка: является ли полученный ответ Гамильтоновым циклом"""
@@ -207,12 +199,27 @@ class Main_Method:
                         return False
         return True
 
-    def mtsp_answer(self, ans):
+    def mtsp_answer(self, ans: list) -> list:
+        """Формирование маршрута для нескольких бпла"""
+
+        s_answer = []
         for i in range(len(ans)):
-            if re.fullmatch(f"{self.start_coord}\d", str(ans[i][0])):
-                ans[i][0] = self.start_coord
-            if re.fullmatch(f"{self.start_coord}\d", str(ans[i][1])):
-                ans[i][1] = self.start_coord
+            if re.fullmatch(f"{self.start_coord}\d*", str(ans[i][0])):
+                s_answer.append(ans[i])
+        final_ans = []
+        answer = []
+        for i in range(len(s_answer)):
+            answer.append([4, s_answer[i][1]])
+            y = s_answer[i][1]
+            for j in range(len(ans)):
+                if ans[j][0] == y:
+                    answer.append([ans[j][0], 4 if re.fullmatch(f"{self.start_coord}\d*", str(ans[j][1])) else ans[j][1]])
+                    y = ans[j][1]
+                    if re.fullmatch(f"{self.start_coord}\d*", str(y)):
+                        break
+            final_ans.append(answer[:])
+            answer = []
+        return final_ans[:]
 
     def upd_branch(self):
         """Обновление ребра ветвления при получении не гамильтонова цикла"""
@@ -229,10 +236,11 @@ class Main_Method:
 
 
 if __name__ == "__main__":
-    mat = np.array([[0, 1, 2, 3, 4],
-                    [1, np.inf, 5, 5, np.sqrt(10)],
-                    [2, 5, np.inf, np.sqrt(20), np.sqrt(5)],
-                    [3, 5, np.sqrt(20), np.inf, 3],
-                    [4, np.sqrt(10), np.sqrt(5), 3, np.inf]])
-    m = Main_Method("", mat, 4, 3)
+    mat = np.array([[0, 1, 2, 3, 4, 5],
+                  [1, np.inf, 4, 5, 7, 5],
+                  [2, 8, np.inf, 5, 6, 6],
+                  [3, 3, 5, np.inf, 9, 6],
+                  [4, 3, 5, 6, np.inf, 2],
+                  [5, 6, 2, 3, 8, np.inf]])
+    m = Main_Method("", mat, 1, 1)
     print(m.solution_cycle())
