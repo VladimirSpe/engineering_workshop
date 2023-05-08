@@ -1,4 +1,5 @@
 import json
+import re
 from typing import *
 import numpy as np
 import logging
@@ -83,7 +84,7 @@ class Var_edge:
 
 
 class Main_Method:
-    def __init__(self, file_name: str, matrix: np.array, aeroport_id: int, number_bpla: int=1):
+    def __init__(self, file_name: str, matrix: np.array, aeroport_id: int, number_bpla: int = 1):
         if len(file_name) != 0:
             mat = Read_Json(file_name)
             ff, self.id = mat.preparation()
@@ -93,46 +94,53 @@ class Main_Method:
         else:
             self.matrix = matrix
         if number_bpla > 1:
-            #start_coord = self.id[aeroport_id]
-            start_coord = aeroport_id
-            self.matrix = self.upd_matr_bpla(self.matrix, start_coord, number_bpla)
+            # start_coord = self.id[aeroport_id]
+            self.start_coord = aeroport_id
+            self.matrix = self.upd_matr_bpla(self.matrix, self.start_coord, number_bpla)
         self.h = 0
+        self.number_bpla = number_bpla
+        self.p = True
         self.answer = []  # Список с конечным ответом
         self.list_dangling_branches = []  # Список оборванных ветвей
         self.solution = []  # Решение для каждого ребенка дерева
 
     def upd_matr_bpla(self, matrix: np.array, start_coord: int, number_bpla: int) -> np.array:
+        """Добавление копий аэродромов при решении mTSP"""
         m = matrix[:]
-        r = m[:, start_coord]
-        for i in range(number_bpla - 1):
+        r = np.copy(m[:, start_coord])
+        for i in range(1, number_bpla):
+            r[0] = int(f'{start_coord}{i}')
             m = np.column_stack((m, r))
-        for i in range(number_bpla - 1):
-            m = np.vstack([m, m[start_coord]])
+        s = np.copy(m[start_coord])
+        for i in range(1, number_bpla):
+            s[0] = int(f'{start_coord}{i}')
+            m = np.vstack([m, s])
         return m[:]
 
     def solution_cycle(self) -> Tuple[list, int]:
         """Основной цикл"""
 
-        while np.shape(self.matrix)[0] != 3:
+        while self.p:
+            if np.shape(self.matrix)[0] == 3:
+                self.prep_ans()
+                if self.test_an(self.answer, len(self.answer)):
+                    self.p = False
+                    continue
+                else:
+                    self.upd_branch()
+                    continue
+
             base = Basic_methods(self.matrix)
             matr, h = base.reduction()
-            print(matr)
             coord_edge = base.zero_rating()
-            inc = Var_edge(matr.copy(), h if len(self.solution) == 0 else self.solution[-1].h, coord_edge, True)  # Маршрут с добавлением графа
+            inc = Var_edge(matr.copy(), h if len(self.solution) == 0 else self.solution[-1].h, coord_edge,
+                           True)  # Маршрут с добавлением графа
             inc.include_edge_graph()
-            ex = Var_edge(matr.copy(), h if len(self.solution) == 0 else self.solution[-1].h, coord_edge, False)  # Маршрут с удалением графа
+            ex = Var_edge(matr.copy(), h if len(self.solution) == 0 else self.solution[-1].h, coord_edge,
+                          False)  # Маршрут с удалением графа
             ex.exclude_edge_graph()
             self.choosing_path(inc, ex)
 
-        mat, self.h = Basic_methods(self.matrix).reduction()
-        self.h += self.solution[-1].h
-        self.solution.append(
-            Var_edge(self.matrix, self.h + self.solution[-1].h, (self.matrix[:, 0][-1], self.matrix[0][1]), True))
-        self.solution.append(
-            Var_edge(self.matrix, self.h + self.solution[-1].h, (self.matrix[:, 0][1], self.matrix[0][2]), True))
-        for i in self.solution:
-            if i.f:
-                self.answer.append(i.coord_edge[:2])
         return self.answer, self.h
 
     def choosing_path(self, inc, ex) -> NoReturn:
@@ -167,11 +175,60 @@ class Main_Method:
                 return False
         return True
 
+    def prep_ans(self):
+        """Формирование ответа при получении матрицы 2X2"""
+
+        mat, self.h = Basic_methods(self.matrix).reduction()
+        self.h += self.solution[-1].h
+        self.solution.append(
+            Var_edge(self.matrix, self.h + self.solution[-1].h, (int(self.matrix[:, 0][-1]), int(self.matrix[0][1])),
+                     True))
+        self.solution.append(
+            Var_edge(self.matrix, self.h + self.solution[-1].h, (int(self.matrix[:, 0][1]), int(self.matrix[0][2])),
+                     True))
+        for i in self.solution:
+            if i.f:
+                self.answer.append(i.coord_edge[:2])
+        if self.number_bpla > 1:
+            self.mtsp_answer(self.answer)
+
+    def test_an(self, ans: np.array, size: int) -> bool:
+        """Проверка: является ли полученный ответ Гамильтоновым циклом"""
+
+        v = [ans[0][0]]
+        y = ans[0][1]
+        for i in range(len(ans)):
+            for j in range(len(ans)):
+                if ans[j][0] == y:
+                    y = ans[j][1]
+                    if ans[j][0] not in v:
+                        v.append(ans[j][0])
+                    elif len(v) != size:
+                        return False
+        return True
+
+    def mtsp_answer(self, ans):
+        for i in range(len(ans)):
+            if re.fullmatch(f"{self.start_coord}\d", str(ans[i][0])):
+                ans[i][0] = self.start_coord
+            if re.fullmatch(f"{self.start_coord}\d", str(ans[i][1])):
+                ans[i][1] = self.start_coord
+
+    def upd_branch(self):
+        """Обновление ребра ветвления при получении не гамильтонова цикла"""
+
+        self.answer = []
+        a = sorted(self.list_dangling_branches, key=lambda x: x[0].h)
+        self.solution[-1].h = np.inf
+        self.list_dangling_branches.append([self.solution[-1], self.solution[:]])
+        self.solution = a[0][1][:]
+        self.solution.append(a[0][0])
+        self.matrix = a[0][0].matrix.copy()
+        self.h = a[0][0].h
+        del self.list_dangling_branches[self.list_dangling_branches.index(a[0])]
+
 
 if __name__ == "__main__":
-    logging.basicConfig(filename="dd.log", filemode="w")
-    logger = logging.getLogger()
-    logger.setLevel(logging.DEBUG)
     mat = np.array([[0, 1, 2, 3, 4],
                     [1, np.inf, 5, 5, np.sqrt(10)],
                     [2, 5, np.inf, np.sqrt(20), np.sqrt(5)],
@@ -179,4 +236,3 @@ if __name__ == "__main__":
                     [4, np.sqrt(10), np.sqrt(5), 3, np.inf]])
     m = Main_Method("", mat, 4, 3)
     print(m.solution_cycle())
-

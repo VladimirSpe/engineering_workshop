@@ -1,4 +1,6 @@
-from Littles_method import Basic_methods, Var_edge, Main_method
+import pytest
+
+from Littles_method import Basic_methods, Var_edge, Main_Method
 import params
 
 class TestBasicOperations:
@@ -73,20 +75,31 @@ class TestVarEdge:
         assert test10.h == params.res10_wo
 
 class TestMain_method:
-    def test_littles_method(self):
-        test1 = Main_method(0, params.arr11)
+
+    @pytest.mark.parametrize('arr, res', [
+        [params.arr11, params.res11_2],
+        [params.arr12, params.res12],
+        [params.arr13, params.res13],
+    ])
+    def test_littles_method(self, arr, res):
+        test1 = Main_Method("", arr, 1)
         sol1 = test1.solution_cycle()[0]
-        assert params.equal_sol(sol1, params.res11_2)
+        assert params.equal_sol(sol1, res)
 
-        test2 = Main_method(0, params.arr12)
-        sol2 = test2.solution_cycle()[0]
-        assert params.equal_sol(sol2, params.res12)
+    @pytest.mark.parametrize('matrix, start_coord, number_bpla, res', [
+        [params.up_matr1, 4, 4, params.res_up_matr1],
+        [params.up_matr2, 5, 3, params.res_up_matr2]
+    ])
+    def test_upd_matr_bpla(self, matrix, start_coord, number_bpla, res):
+        test_u1 = Main_Method("", [], start_coord)
+        res_u = test_u1.upd_matr_bpla(matrix, start_coord, number_bpla)
+        assert params.equal_matrix(res_u, res)
 
-        test3 = Main_method(0, params.arr13)
-        sol3 = test3.solution_cycle()[0]
-        assert params.equal_sol(sol3, params.res13)
-
-        test4 = Main_method(0, params.arr14)
-        sol4 = test4.solution_cycle()[0]
-        assert params.equal_sol(sol4, params.res14)
-
+    @pytest.mark.parametrize('ans, res', [
+        [params.tes_g_c1, False],
+        [params.test_g_c2, True]
+    ])
+    def test_hamiltonian_cycle(self, ans, res):
+        test_hc = Main_Method("", [], 1)
+        res_hc = test_hc.test_an(ans, len(ans))
+        assert res_hc == res
