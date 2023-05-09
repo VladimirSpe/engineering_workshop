@@ -99,11 +99,11 @@ class Main_Method:
         m = matrix[:]
         r = np.copy(m[:, start_coord])
         for i in range(1, number_bpla):
-            r[0] = int(f'{start_coord}{i}')
+            r[0] = int(f'{start_coord}0{i}')
             m = np.column_stack((m, r))
         s = np.copy(m[start_coord])
         for i in range(1, number_bpla):
-            s[0] = int(f'{start_coord}{i}')
+            s[0] = int(f'{start_coord}0{i}')
             m = np.vstack([m, s])
         return m[:]
 
@@ -204,18 +204,18 @@ class Main_Method:
 
         s_answer = []
         for i in range(len(ans)):
-            if re.fullmatch(f"{self.start_coord}\d*", str(ans[i][0])):
+            if re.fullmatch(f"{self.start_coord}0\d*", str(ans[i][0])) or self.start_coord == ans[i][0]:
                 s_answer.append(ans[i])
         final_ans = []
         answer = []
         for i in range(len(s_answer)):
-            answer.append([4, s_answer[i][1]])
+            answer.append([self.start_coord, s_answer[i][1]])
             y = s_answer[i][1]
             for j in range(len(ans)):
                 if ans[j][0] == y:
-                    answer.append([ans[j][0], 4 if re.fullmatch(f"{self.start_coord}\d*", str(ans[j][1])) else ans[j][1]])
+                    answer.append([ans[j][0], self.start_coord if re.fullmatch(f"{self.start_coord}0\d*", str(ans[j][1])) else ans[j][1]])
                     y = ans[j][1]
-                    if re.fullmatch(f"{self.start_coord}\d*", str(y)):
+                    if re.fullmatch(f"{self.start_coord}0\d*", str(y)) or y == self.start_coord:
                         break
             final_ans.append(answer[:])
             answer = []
