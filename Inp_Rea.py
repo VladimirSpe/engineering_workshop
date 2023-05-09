@@ -94,7 +94,7 @@ class CircleTour(Tour):
         return (T1_x, T1_y), (T2_x, T2_y), l
 
     def angle_btw_points(self, point1, point2, radius):
-        L = ((point1[0] - point2[0]) ** 2 + (point1[1] - point2[1]) ** 2) ** 0.5
+        L = round(((point1[0] - point2[0]) ** 2 + (point1[1] - point2[1]) ** 2) ** 0.5, 5)
         alpha = acos(1 - ((L ** 2) / (2 * (radius ** 2))))
         return alpha
 
