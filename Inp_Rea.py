@@ -33,10 +33,164 @@ class LineTour(Tour):
         super().get_length()
         return self.L
 
-    def draw(self, ax, color="green"):
+    def draw(self, ax):
         super().draw(ax)
-        line = matplotlib.patches.Polygon([self.p1, self.p2], fill=False, closed=False, color=color)
+        line = matplotlib.patches.Polygon([self.p1, self.p2], fill=False, closed=False, color="green")
         ax.add_patch(line)
+
+
+class PolygonTour(Tour):
+    def __init__(self, p1, p2, polygon):
+        super().__init__()
+        self.p1 = p1
+        self.p2 = p2
+        self.polygon = polygon
+        self.points_res = []
+        self.L = 0
+
+    def orientation(self, a, b, c):
+        """
+        Check orientation:
+                0 - collenary,
+                1-  clockwise,
+                2 - counter-clockwise
+        """
+        t = (b[1] - a[1]) * (c[0] - b[0]) - (b[0] - a[0]) * (c[1] - b[1])
+        if t == 0:
+            return 0
+        elif t > 0:
+            return 1
+        else:
+            return 2
+
+    def check_w_polygon(self, A, B):
+        for i in range(1, len(self.polygon)):
+            sec1 = [A, B]
+            sec2 = [(self.polygon[i][0], self.polygon[i][1]), (self.polygon[i - 1][0], self.polygon[i - 1][1])]
+            if self.check_intersection(sec1, sec2) and (A != self.polygon[i] and A != self.polygon[i - 1]):
+                return True
+        return False
+
+    def check_intersection(self, sec1, sec2):
+        p1 = self.orientation(sec1[0], sec1[1], sec2[0]) != self.orientation(sec1[0], sec1[1], sec2[1])
+        p2 = self.orientation(sec2[0], sec2[1], sec1[0]) != self.orientation(sec2[0], sec2[1], sec1[1])
+        if p1 and p2:
+            return True
+        return False
+
+    def points_on_same_side(self, points, line_coords):
+        x1, y1 = line_coords[0]
+        x2, y2 = line_coords[1]
+        A = y2 - y1
+        B = x1 - x2
+        C = x2 * y1 - x1 * y2
+        sign = None
+        for point in points:
+            x, y = point
+            value = A * x + B * y + C
+            if sign is None:
+                sign = value
+            elif sign * value < 0:
+                return False
+        return True
+
+    def line_intersection(self, line1, line2):
+        x1, y1 = line1[0]
+
+        x2, y2 = line1[1]
+        x3, y3 = line2[0]
+        x4, y4 = line2[1]
+        A1 = y2 - y1
+        B1 = x1 - x2
+        C1 = x2 * y1 - x1 * y2
+        A2 = y4 - y3
+        B2 = x3 - x4
+        C2 = x4 * y3 - x3 * y4
+        D = A1 * B2 - A2 * B1
+        if D == 0:
+            return None
+        x = (B1 * C2 - B2 * C1) / D
+        y = (A2 * C1 - A1 * C2) / D
+        if not (min(x1, x2) <= x <= max(x1, x2) and min(y1, y2) <= y <= max(y1, y2) and
+                min(x3, x4) <= x <= max(x3, x4) and min(y3, y4) <= y <= max(y3, y4)):
+            return None
+
+        return x, y
+
+    def build_detour(self):
+        tang1, tang2 = self.build_tangent(self.p1, self.polygon)
+        tour1_S, tour1_points = self.build_polyline(tang1, self.p2, True)
+        tour2_S, tour2_points = self.build_polyline(tang1, self.p2, False)
+        tour3_S, tour3_points = self.build_polyline(tang2, self.p2, True)
+        tour4_S, tour4_points = self.build_polyline(tang1, self.p2, False)
+        min_tour = min(tour1_S, tour2_S, tour3_S, tour4_S)
+        if min_tour == tour1_S:
+            self.points_res = tour1_points
+            self.L = min_tour
+        if min_tour == tour2_S:
+            self.points_res = tour2_points
+            self.L = min_tour
+        if min_tour == tour3_S:
+            self.points_res = tour3_points
+            self.L = min_tour
+        if min_tour == tour4_S:
+            self.points_res = tour4_points
+            self.L = min_tour
+
+    def build_polyline(self, point1, point2, mode):
+        """Mode True-clockwise, False-counter-clockwise"""
+        current_ind = self.polygon.index(point1)
+        points = []
+        x1, y1 = self.p1
+        x2, y2 = point1
+        d = sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
+        L = d
+        while True:
+            points.append(self.polygon[current_ind % len(self.polygon)])
+            if self.check_w_polygon(self.polygon[current_ind % len(self.polygon)], point2) is True:
+                x1, y1 = self.polygon[current_ind % len(self.polygon)]
+                x2, y2 = self.polygon[(current_ind + 1) % len(self.polygon)]
+                d = sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
+                L += d
+                if mode is True:
+                    current_ind += 1
+                else:
+                    current_ind -= 1
+            else:
+                x1, y1 = self.polygon[current_ind % len(self.polygon)]
+                x2, y2 = point2
+                d = sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
+                L += d
+                return L, points
+
+    def build_tour_counter_clockwise(self):
+        pass
+
+    def build_tangent(self, point, points):
+        tang1_p = (0, 0)
+        tang2_p = (0, 0)
+        for i in points:
+            new_points = points.copy()
+            new_points.remove(i)
+            pp = self.points_on_same_side(new_points, [point, i])
+            if pp and tang1_p == (0, 0):
+                tang1_p = i
+            elif pp:
+                tang2_p = i
+                return tang1_p, tang2_p
+
+    def draw(self, ax):
+        super().draw(ax)
+        line1 = matplotlib.patches.Polygon([self.p1, self.points_res[0]], fill=False, closed=False, color="green")
+        line2 = matplotlib.patches.Polygon([self.p2, self.points_res[-1]], fill=False, closed=False, color="green")
+        broke_line = matplotlib.patches.Polygon(self.points_res, fill=False, closed=False, color="green")
+        ax.add_patch(broke_line)
+        ax.add_patch(line1)
+        ax.add_patch(line2)
+
+    def get_length(self):
+        super().get_length()
+        return self.L
 
 
 class CircleTour(Tour):
@@ -105,22 +259,18 @@ class CircleTour(Tour):
         super().get_length()
         return self.L
 
-    def draw(self, ax, color="green"):
+    def draw(self, ax):
         super().draw(ax)
         angle1 = np.arctan2(self.tang1[1] - self.center[1], self.tang1[0] - self.center[0])
         angle2 = np.arctan2(self.tang2[1] - self.center[1], self.tang2[0] - self.center[0])
 
-        # находим разницу углов и считаем длину дуги
-        arc_length = self.r * np.abs(angle2 - angle1)
-
-        # создаем объект дуги
         arc = Arc(self.center, 2 * self.r, 2 * self.r, angle=0, theta1=min(np.degrees(angle1), np.degrees(angle2)),
                   theta2=max(np.degrees(angle1), np.degrees(angle2)),
-                  color=color)
+                  color="green")
 
         ax.add_patch(arc)
-        line1 = matplotlib.patches.Polygon([self.id1_p, self.tang1], fill=False, closed=False, color=color)
-        line2 = matplotlib.patches.Polygon([self.id2_p, self.tang2], fill=False, closed=False, color=color)
+        line1 = matplotlib.patches.Polygon([self.id1_p, self.tang1], fill=False, closed=False, color="green")
+        line2 = matplotlib.patches.Polygon([self.id2_p, self.tang2], fill=False, closed=False, color="green")
 
         ax.add_patch(line1)
         ax.add_patch(line2)
@@ -130,16 +280,13 @@ class Read_Json:
     def __init__(self, file_name):
         """Read JSON files"""
 
-
         with open(file_name) as f:
             self.data = json.load(f)
         self.KT = self.data["data_points"]
         self.SVN_names = self.data["forbidden_lines"]
         self.SVN_cords = []
-        self.start_coord = 1
-        self.number_bpla = self.data["number_bpla"]
-        self.aeroport_id = self.data["aeroport_id"]
         self.circles = self.data["data_forbidden_zone"]
+        self.polygon = self.data["relief"]
         self.matrix = np.zeros((len(self.KT), len(self.KT)))
         self.path_matrix = [[None] * len(self.KT) for i in range(len(self.KT))]
 
@@ -203,28 +350,33 @@ class Read_Json:
                 return True, C, R
             else:
                 continue
-        return False
+        return False, 0
 
+    def check_w_polygon(self, A, B):
+        for i in range(1, len(self.polygon)):
+            sec1 = [A, B]
+            sec2 = [(self.polygon[i]["x"], self.polygon[i]["y"]), (self.polygon[i - 1]["x"], self.polygon[i - 1]["y"])]
+            if self.check_intersection(sec1, sec2):
+                return True
+        return False
     def preparation(self):
         """Creating matrix"""
-        ids = list(range(0, len(self.matrix[0])+1))
+        ids = list(range(0, len(self.matrix[0]) + 1))
         for i in range(len(self.KT)):
             x1 = self.KT[i]["x"]
             y1 = self.KT[i]["y"]
             id1 = self.KT[i]["id"]
-            if id1 == self.aeroport_id:
-                self.start_coord = i + 1
             self.matrix[i][i] = np.inf
-            #ids.append(id1)
+            # ids.append(id1)
             for j in range(0, i):
-                #print(self.matrix)
+                # print(self.matrix)
                 x2 = self.KT[j]["x"]
                 y2 = self.KT[j]["y"]
                 id2 = self.KT[j]["id"]
                 p1 = self.check_w_SVN(id1, id2)
                 p2 = self.check_w_circle((x1, y1), (x2, y2))
-                if p1 is False and p2 is False:
-
+                p3 = self.check_w_polygon((x1, y1), (x2, y2))
+                if p1 is False and p2[0] is False and p3 is False:
                     line = LineTour(id1, id2, (x1, y1), (x2, y2))
                     self.matrix[i][j] = line.get_length()
                     self.matrix[j][i] = line.get_length()
@@ -241,6 +393,15 @@ class Read_Json:
                     self.matrix[j][i] = S
                     self.path_matrix[i][j] = circ
                     self.path_matrix[j][i] = circ
+                elif p3 is True:
+                    points_polygon = [(i["x"], i["y"]) for i in self.polygon]
+                    polygon = PolygonTour((x1, y1), (x2, y2), points_polygon)
+                    polygon.build_detour()
+                    S = polygon.get_length()
+                    self.matrix[i][j] = S
+                    self.matrix[j][i] = S
+                    self.path_matrix[i][j] = polygon
+                    self.path_matrix[j][i] = polygon
 
         self.path_matrix = np.vstack([np.array(ids)[1:], self.path_matrix])
         self.matrix = np.vstack([np.array(ids)[1:], self.matrix])
@@ -267,6 +428,11 @@ class Read_Json:
                                               closed=False,
                                               color="red")
             ax.add_patch(line)
+        points_polygon = [(i["x"], i["y"]) for i in self.polygon]
+        points_polygon.append(points_polygon[0])
+        polygon = matplotlib.patches.Polygon(points_polygon, fill=False, closed=True, color="red")
+        ax.add_patch(polygon)
+
 
     def get_matrix(self):
         return self.matrix
