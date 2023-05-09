@@ -90,6 +90,7 @@ class Main_Method:
         self.h = 0
         self.number_bpla = number_bpla
         self.p = True
+        self.start_size = np.size(self.matrix[0])
         self.answer = []  # Список с конечным ответом
         self.list_dangling_branches = []  # Список оборванных ветвей
         self.solution = []  # Решение для каждого ребенка дерева
@@ -113,7 +114,9 @@ class Main_Method:
         while self.p:
             if np.shape(self.matrix)[0] == 3:
                 self.prep_ans()
-                if self.test_an(self.answer, len(self.answer)):
+                if self.test_an(self.answer, self.start_size):
+                    if self.number_bpla > 1:
+                        self.answer = self.mtsp_answer(self.answer)
                     self.p = False
                     continue
                 else:
@@ -179,14 +182,12 @@ class Main_Method:
         for i in self.solution:
             if i.f:
                 self.answer.append(i.coord_edge[:2])
-        if self.number_bpla > 1:
-            self.answer = self.mtsp_answer(self.answer)
-        else:
-            self.answer = list(map(lambda x: [x[0], x[1]], self.answer))
+        self.answer = list(map(lambda x: [x[0], x[1]], self.answer))
 
     def test_an(self, ans: np.array, size: int) -> bool:
         """Проверка: является ли полученный ответ Гамильтоновым циклом"""
-
+        if len(ans) != size - 1:
+            return False
         v = [ans[0][0]]
         y = ans[0][1]
         for i in range(len(ans)):
@@ -195,7 +196,7 @@ class Main_Method:
                     y = ans[j][1]
                     if ans[j][0] not in v:
                         v.append(ans[j][0])
-                    elif len(v) != size:
+                    elif len(v) != size - 1:
                         return False
         return True
 

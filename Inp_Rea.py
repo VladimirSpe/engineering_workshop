@@ -33,9 +33,9 @@ class LineTour(Tour):
         super().get_length()
         return self.L
 
-    def draw(self, ax):
+    def draw(self, ax, color="green"):
         super().draw(ax)
-        line = matplotlib.patches.Polygon([self.p1, self.p2], fill=False, closed=False, color="green")
+        line = matplotlib.patches.Polygon([self.p1, self.p2], fill=False, closed=False, color=color)
         ax.add_patch(line)
 
 
@@ -105,7 +105,7 @@ class CircleTour(Tour):
         super().get_length()
         return self.L
 
-    def draw(self, ax):
+    def draw(self, ax, color="green"):
         super().draw(ax)
         angle1 = np.arctan2(self.tang1[1] - self.center[1], self.tang1[0] - self.center[0])
         angle2 = np.arctan2(self.tang2[1] - self.center[1], self.tang2[0] - self.center[0])
@@ -116,11 +116,11 @@ class CircleTour(Tour):
         # создаем объект дуги
         arc = Arc(self.center, 2 * self.r, 2 * self.r, angle=0, theta1=min(np.degrees(angle1), np.degrees(angle2)),
                   theta2=max(np.degrees(angle1), np.degrees(angle2)),
-                  color="green")
+                  color=color)
 
         ax.add_patch(arc)
-        line1 = matplotlib.patches.Polygon([self.id1_p, self.tang1], fill=False, closed=False, color="green")
-        line2 = matplotlib.patches.Polygon([self.id2_p, self.tang2], fill=False, closed=False, color="green")
+        line1 = matplotlib.patches.Polygon([self.id1_p, self.tang1], fill=False, closed=False, color=color)
+        line2 = matplotlib.patches.Polygon([self.id2_p, self.tang2], fill=False, closed=False, color=color)
 
         ax.add_patch(line1)
         ax.add_patch(line2)
@@ -130,11 +130,15 @@ class Read_Json:
     def __init__(self, file_name):
         """Read JSON files"""
 
+
         with open(file_name) as f:
             self.data = json.load(f)
         self.KT = self.data["data_points"]
         self.SVN_names = self.data["forbidden_lines"]
         self.SVN_cords = []
+        self.start_coord = 1
+        self.number_bpla = self.data["number_bpla"]
+        self.aeroport_id = self.data["aeroport_id"]
         self.circles = self.data["data_forbidden_zone"]
         self.matrix = np.zeros((len(self.KT), len(self.KT)))
         self.path_matrix = [[None] * len(self.KT) for i in range(len(self.KT))]
@@ -208,6 +212,8 @@ class Read_Json:
             x1 = self.KT[i]["x"]
             y1 = self.KT[i]["y"]
             id1 = self.KT[i]["id"]
+            if id1 == self.aeroport_id:
+                self.start_coord = i + 1
             self.matrix[i][i] = np.inf
             #ids.append(id1)
             for j in range(0, i):

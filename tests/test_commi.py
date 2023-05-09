@@ -68,7 +68,7 @@ class TestMain_method:
         [params.up_matr2, 5, 3, params.res_up_matr2]
     ])
     def test_upd_matr_bpla(self, matrix, start_coord, number_bpla, res):
-        test_u1 = Main_Method("", [], start_coord)
+        test_u1 = Main_Method("", [[]], start_coord)
         res_u = test_u1.upd_matr_bpla(matrix, start_coord, number_bpla)
         assert params.equal_matrix(res_u, res)
 
@@ -77,15 +77,15 @@ class TestMain_method:
         [params.test_g_c2, True]
     ])
     def test_hamiltonian_cycle(self, ans, res):
-        test_hc = Main_Method("", [], 1)
-        res_hc = test_hc.test_an(ans, len(ans))
+        test_hc = Main_Method("", [[]], 1)
+        res_hc = test_hc.test_an(ans, len(ans) + 1)
         assert res_hc == res
 
     @pytest.mark.parametrize('arr, res', [
         [params.test_m_a1, params.res_m_a1]
     ])
     def test_mtsp_answer(self, arr, res):
-        test_ma = Main_Method("", [], 1)
+        test_ma = Main_Method("", [[]], 1)
         test_ma.start_coord = 4
         test_ma.number_bpla = 3
         res_ma = test_ma.mtsp_answer(arr)
