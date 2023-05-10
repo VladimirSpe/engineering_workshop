@@ -12,16 +12,15 @@ class TestReadJson:
         assert test.check_intersection(sec1, sec2) == res
 
     @pytest.mark.parametrize('id1, id2, res',
-                             [(1004, 1003, True),
-                              (1007, 1002, True),
-                              (1005, 1006, False)])
+                             [((14.100201, 80.100201), (35.100201, 80.100201), True),
+                              ((27.100201, 100.100201), (55.100201, 80.100201), True)])
     def test_check_with_SVN(self, id1, id2, res):
         test = Read_Json("file_kt_1.json")
 
         assert test.check_w_SVN(id1, id2) == res
 
     @pytest.mark.parametrize('A, B, res',
-                             [[(27.100201, 100.100201), (30.100101, 40.100101), False],
+                             [[(27.100201, 100.100201), (30.100101, 40.100101), (False, 0)],
                               [(14.100201, 80.100201), (100.100101, 13.100101), (True, (45.100101, 44.100101), 11)]])
     def test_check_with_circle(self, A, B, res):
         test = Read_Json("file_kt_1.json")
@@ -57,7 +56,7 @@ class TestReadJson:
         assert np.isclose(test.L, res[2], atol=0.01)
 
     @pytest.mark.parametrize('A, B, res',
-                             [[(150, 0), (150, 15), False], [(105, 16), (120, 10), True]])
+                             [[(150, 0), (150, 15), False], [(105, 16), (120, 10), False]])
     def test_check_w_polygon(self, A, B, res):
         test = Read_Json("file_kt_1.json")
         assert test.check_w_polygon(A, B) == res

@@ -79,6 +79,7 @@ class PolygonTour(Tour):
         return False
 
     def points_on_same_side(self, points, line_coords):
+        """Сhecks the orientation of points relative to some segment"""
         x1, y1 = line_coords[0]
         x2, y2 = line_coords[1]
         A = y2 - y1
@@ -95,50 +96,44 @@ class PolygonTour(Tour):
         return True
 
     def line_intersection(self, line1, line2):
+        """returns the point of intersection of two line segments"""
         x1, y1 = line1[0]
-
         x2, y2 = line1[1]
         x3, y3 = line2[0]
         x4, y4 = line2[1]
-        A1 = y2 - y1
-        B1 = x1 - x2
-        C1 = x2 * y1 - x1 * y2
-        A2 = y4 - y3
-        B2 = x3 - x4
-        C2 = x4 * y3 - x3 * y4
-        D = A1 * B2 - A2 * B1
-        if D == 0:
-            return None
-        x = (B1 * C2 - B2 * C1) / D
-        y = (A2 * C1 - A1 * C2) / D
-        if not (min(x1, x2) <= x <= max(x1, x2) and min(y1, y2) <= y <= max(y1, y2) and
-                min(x3, x4) <= x <= max(x3, x4) and min(y3, y4) <= y <= max(y3, y4)):
+
+        dx1, dy1 = x2 - x1, y2 - y1
+        dx2, dy2 = x4 - x3, y4 - y3
+        denom = dx1 * dy2 - dy1 * dx2
+
+        if denom == 0:
             return None
 
-        return x, y
+        ua = (dx2 * (y1 - y3) - dy2 * (x1 - x3)) / denom
+        ub = (dx1 * (y1 - y3) - dy1 * (x1 - x3)) / denom
+
+        if 0 <= ua <= 1 and 0 <= ub <= 1:
+            return x1 + ua * dx1, y1 + ua * dy1
+
+        return None
 
     def build_detour(self):
-        tang1, tang2 = self.build_tangent(self.p1, self.polygon)
-        tour1_S, tour1_points = self.build_polyline(tang1, self.p2, True)
-        tour2_S, tour2_points = self.build_polyline(tang1, self.p2, False)
-        tour3_S, tour3_points = self.build_polyline(tang2, self.p2, True)
-        tour4_S, tour4_points = self.build_polyline(tang1, self.p2, False)
-        min_tour = min(tour1_S, tour2_S, tour3_S, tour4_S)
-        if min_tour == tour1_S:
-            self.points_res = tour1_points
-            self.L = min_tour
-        if min_tour == tour2_S:
-            self.points_res = tour2_points
-            self.L = min_tour
-        if min_tour == tour3_S:
-            self.points_res = tour3_points
-            self.L = min_tour
-        if min_tour == tour4_S:
-            self.points_res = tour4_points
-            self.L = min_tour
+        """Main func - create all tour"""
+        tangs = [self.build_tangent(self.p1, self.polygon) for i in range(2)]
+        tours = []
+        for tang in tangs:
+            tours.append(self.build_polyline(tang[0], self.p2, True))
+            tours.append(self.build_polyline(tang[0], self.p2, False))
+            tours.append(self.build_polyline(tang[1], self.p2, True))
+            tours.append(self.build_polyline(tang[1], self.p2, False))
+        min_tour = min(tours, key=lambda x: x[0])
+        self.points_res, self.L = min_tour[1], min_tour[0]
 
     def build_polyline(self, point1, point2, mode):
-        """Mode True-clockwise, False-counter-clockwise"""
+        """
+        Building a path along a polygon clockwise and counterclockwise depending on the mod
+        Mode True-clockwise, False-counter-clockwise
+        """
         current_ind = self.polygon.index(point1)
         points = []
         x1, y1 = self.p1
@@ -162,9 +157,6 @@ class PolygonTour(Tour):
                 d = sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
                 L += d
                 return L, points
-
-    def build_tour_counter_clockwise(self):
-        pass
 
     def build_tangent(self, point, points):
         tang1_p = (0, 0)
@@ -205,6 +197,7 @@ class CircleTour(Tour):
         self.r = 0
 
     def build_circle_detour(self, point1, point2, circle_point, r):
+        """Main func - create all tour"""
         tangents1 = self.build_tangent(point1, circle_point, r)
         tangents2 = self.build_tangent(point2, circle_point, r)
         arc11 = self.arc_length(tangents1[0], tangents2[0], r)
@@ -283,14 +276,21 @@ class Read_Json:
         with open(file_name) as f:
             self.data = json.load(f)
         self.KT = self.data["data_points"]
-        self.SVN_names = self.data["forbidden_lines"]
-        self.SVN_cords = []
-        self.circles = self.data["data_forbidden_zone"]
-        self.polygon = self.data["relief"]
+        self.SVN_coords = []
+        self.SVN_names = []
+        self.circles = []
+        self.polygon = []
+        if ("forbidden_lines" in self.data.keys()):
+            self.SVN_names = self.data["forbidden_lines"]
+        if ("data_forbidden_zone" in self.data.keys()):
+            self.circles = self.data["data_forbidden_zone"]
+        if ("relief" in self.data.keys()):
+            self.polygon = self.data["relief"]
         self.matrix = np.zeros((len(self.KT), len(self.KT)))
         self.path_matrix = [[None] * len(self.KT) for i in range(len(self.KT))]
 
     def find_cords_by_name(self):
+        """Finds point coordinates from air corridor indices"""
         for i in range(len(self.SVN_names)):
             id1_cords = (0, 0)
             id2_cords = (0, 0)
@@ -299,7 +299,7 @@ class Read_Json:
                     id1_cords = (self.KT[j]["x"], self.KT[j]["y"])
                 if self.SVN_names[i]["id2"] == self.KT[j]["id"]:
                     id2_cords = (self.KT[j]["x"], self.KT[j]["y"])
-            self.SVN_cords.append((id1_cords, id2_cords))
+            self.SVN_coords.append((id1_cords, id2_cords))
 
     def orientation(self, a, b, c):
         """
@@ -323,11 +323,19 @@ class Read_Json:
             return True
         return False
 
-    def check_w_SVN(self, id1, id2):
+    def check_w_SVN(self, p1, p2):
         """Check intersection with SVN"""
-        for i in range(len(self.SVN_names)):
-            if (id1 == self.SVN_names[i]["id1"] and id2 == self.SVN_names[i]["id2"]) or (
-                    id1 == self.SVN_names[i]["id2"] and id2 == self.SVN_names[i]["id1"]):
+        self.find_cords_by_name()
+        for i in range(len(self.SVN_coords)):
+            SVN_1 = self.SVN_coords[i][0]
+            SVN_2 = self.SVN_coords[i][1]
+            if (p1 == SVN_1 and p2 == SVN_2) or (p2 == SVN_1 and p1 == SVN_2):
+                return True
+            if self.check_intersection(self.SVN_coords[i], (p1, p2)):
+                if (p1 == SVN_1 and p2 != SVN_2) or (p2 == SVN_1 and p1 != SVN_2) or (p1 == SVN_2 and p2 != SVN_1) or (p2 == SVN_2 and p1 != SVN_1):
+                    print(p1, p2, SVN_1, SVN_2)
+                    continue
+                print(p1, p2, SVN_1, SVN_2, 1111111111)
                 return True
         return False
 
@@ -359,6 +367,7 @@ class Read_Json:
             if self.check_intersection(sec1, sec2):
                 return True
         return False
+
     def preparation(self):
         """Creating matrix"""
         ids = list(range(0, len(self.matrix[0]) + 1))
@@ -373,7 +382,7 @@ class Read_Json:
                 x2 = self.KT[j]["x"]
                 y2 = self.KT[j]["y"]
                 id2 = self.KT[j]["id"]
-                p1 = self.check_w_SVN(id1, id2)
+                p1 = self.check_w_SVN((x1, y1), (x2, y2))
                 p2 = self.check_w_circle((x1, y1), (x2, y2))
                 p3 = self.check_w_polygon((x1, y1), (x2, y2))
                 if p1 is False and p2[0] is False and p3 is False:
@@ -421,21 +430,19 @@ class Read_Json:
             id = i["id"]
             ax.add_patch(Circle((C[0], C[1]), R, fill=False, linewidth=2, color="red",
                                 label=id))
-            self.find_cords_by_name()
-        for i in self.SVN_cords:
+        self.find_cords_by_name()
+        for i in self.SVN_coords:
             line = matplotlib.patches.Polygon([i[0], i[1]],
                                               fill=False,
                                               closed=False,
                                               color="red")
             ax.add_patch(line)
         points_polygon = [(i["x"], i["y"]) for i in self.polygon]
-        points_polygon.append(points_polygon[0])
-        polygon = matplotlib.patches.Polygon(points_polygon, fill=False, closed=True, color="red")
-        ax.add_patch(polygon)
-
+        if len(points_polygon) != 0:
+            points_polygon.append(points_polygon[0])
+            polygon = matplotlib.patches.Polygon(points_polygon, fill=False, closed=True, color="red")
+            ax.add_patch(polygon)
 
     def get_matrix(self):
         return self.matrix
-
-
 
