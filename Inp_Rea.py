@@ -2,7 +2,7 @@ import json
 from abc import abstractmethod, ABC
 
 import numpy as np
-from math import atan2, acos, sin, cos, sqrt, asin
+from math import atan2, acos, sin, cos, sqrt, asin, pi
 from matplotlib.patches import Circle, Arc
 import matplotlib.patches
 
@@ -256,7 +256,10 @@ class CircleTour(Tour):
         super().draw(ax)
         angle1 = np.arctan2(self.tang1[1] - self.center[1], self.tang1[0] - self.center[0])
         angle2 = np.arctan2(self.tang2[1] - self.center[1], self.tang2[0] - self.center[0])
-
+        if (angle1 < 0):
+            angle1 += 2*pi
+        if (angle2 < 0):
+            angle2 += 2*pi
         arc = Arc(self.center, 2 * self.r, 2 * self.r, angle=0, theta1=min(np.degrees(angle1), np.degrees(angle2)),
                   theta2=max(np.degrees(angle1), np.degrees(angle2)),
                   color=color)
@@ -286,6 +289,7 @@ class Read_Json:
             self.circles = self.data["data_forbidden_zone"]
         if ("relief" in self.data.keys()):
             self.polygon = self.data["relief"]
+
         self.start_coord = self.data["aeroport_id"]
         self.number_bpla = self.data["number_bpla"] if "number_bpla" in self.data.keys() else 1
         self.matrix = np.zeros((len(self.KT), len(self.KT)))
@@ -335,9 +339,7 @@ class Read_Json:
                 return True
             if self.check_intersection(self.SVN_coords[i], (p1, p2)):
                 if (p1 == SVN_1 and p2 != SVN_2) or (p2 == SVN_1 and p1 != SVN_2) or (p1 == SVN_2 and p2 != SVN_1) or (p2 == SVN_2 and p1 != SVN_1):
-                    print(p1, p2, SVN_1, SVN_2)
                     continue
-                print(p1, p2, SVN_1, SVN_2, 1111111111)
                 return True
         return False
 
