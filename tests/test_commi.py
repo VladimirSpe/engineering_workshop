@@ -60,6 +60,7 @@ class TestMain_method:
     ])
     def test_littles_method(self, arr, res):
         test1 = Main_Method("", arr, 1)
+        test1.start_coord = 1
         sol1 = test1.solution_cycle()[0]
         assert params.equal_sol(sol1, res)
 
@@ -72,21 +73,27 @@ class TestMain_method:
         res_u = test_u1.upd_matr_bpla(matrix, start_coord, number_bpla)
         assert params.equal_matrix(res_u, res)
 
-    @pytest.mark.parametrize('ans, res', [
-        [params.tes_g_c1, False],
-        [params.test_g_c2, True]
+    @pytest.mark.parametrize('ans, start_coord, number_bpla, res', [
+        [params.tes_g_c1, 1, 1, False],
+        [params.test_g_c2, 1, 1, True],
+        [params.test_g_c3, 2, 2, True],
+        [params.test_g_c4, 1, 3, False]
+
     ])
-    def test_hamiltonian_cycle(self, ans, res):
+    def test_hamiltonian_cycle(self, ans, start_coord, number_bpla, res):
         test_hc = Main_Method("", [[]], 1)
+        test_hc.number_bpla = number_bpla
+        test_hc.start_coord = start_coord
         res_hc = test_hc.test_an(ans, len(ans) + 1)
         assert res_hc == res
 
-    @pytest.mark.parametrize('arr, res', [
-        [params.test_m_a1, params.res_m_a1]
+    @pytest.mark.parametrize('arr, start_coord, number_pla, res', [
+        [params.test_m_a1, 4, 3, params.res_m_a1],
+        [params.test_m_a2, 2, 2, params.res_m_a2]
     ])
-    def test_mtsp_answer(self, arr, res):
+    def test_mtsp_answer(self, arr, res, start_coord, number_pla):
         test_ma = Main_Method("", [[]], 1)
-        test_ma.start_coord = 4
-        test_ma.number_bpla = 3
+        test_ma.start_coord = start_coord
+        test_ma.number_bpla = number_pla
         res_ma = test_ma.mtsp_answer(arr)
         assert params.equal_sol(res_ma, res)
