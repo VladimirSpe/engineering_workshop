@@ -79,7 +79,7 @@ class Var_edge:
 
 
 class Main_Method:
-    def __init__(self, file_name: str, matrix: np.array, aeroport_id: int, number_bpla: int = 1):
+    def __init__(self, file_name: str, matrix: np.array, start_coord: int, number_bpla: int = 1):
         if len(file_name) != 0:
             mat = Read_Json(file_name)
             ff, self.id = mat.preparation()
@@ -88,9 +88,8 @@ class Main_Method:
             self.matrix = np.vstack((matrix, mm))
         else:
             self.matrix = matrix
+        self.start_coord = start_coord
         if number_bpla > 1:
-            # start_coord = self.id[aeroport_id]
-            self.start_coord = aeroport_id
             self.matrix = self.upd_matr_bpla(self.matrix, self.start_coord, number_bpla)
         self.h = 0
         self.number_bpla = number_bpla

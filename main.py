@@ -3,20 +3,23 @@ from Littles_method import Main_Method
 import matplotlib.pyplot as plt
 from matplotlib import colors as mcolors
 
-COLORS = list(mcolors.BASE_COLORS.keys())
+COLORS = [x for x in list(mcolors.BASE_COLORS.keys()) if x != 'r']
 
 
 def main():
     fig, ax = plt.subplots()
-    geom = Read_Json("tests/file_kt_1.json")
+    geom = Read_Json("tests/test_mtsp2.json")
     geom.draw(ax)
     geom.preparation()
-    print(geom.matrix)
-    res = Main_Method("", geom.matrix, 1, 1)
+    res = Main_Method("", geom.matrix, geom.start_coord, geom.number_bpla)
     draw_mat = geom.path_matrix
-    print(res.solution_cycle())
-    for path in res.solution_cycle()[0]:
-        draw_mat[int(path[0])][int(path[1])].draw(ax)
+    if geom.number_bpla == 1:
+        for path in res.solution_cycle()[0]:
+            draw_mat[int(path[0])][int(path[1])].draw(ax)
+    else:
+        for bpla in range(geom.number_bpla):
+            for path in res.solution_cycle()[0][bpla]:
+                draw_mat[int(path[0])][int(path[1])].draw(ax, COLORS[bpla])
 
     ax.set_aspect('equal')
     plt.show()

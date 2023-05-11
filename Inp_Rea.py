@@ -33,9 +33,9 @@ class LineTour(Tour):
         super().get_length()
         return self.L
 
-    def draw(self, ax):
+    def draw(self, ax, color="green"):
         super().draw(ax)
-        line = matplotlib.patches.Polygon([self.p1, self.p2], fill=False, closed=False, color="green")
+        line = matplotlib.patches.Polygon([self.p1, self.p2], fill=False, closed=False, color=color)
         ax.add_patch(line)
 
 
@@ -171,11 +171,11 @@ class PolygonTour(Tour):
                 tang2_p = i
                 return tang1_p, tang2_p
 
-    def draw(self, ax):
+    def draw(self, ax, color="green"):
         super().draw(ax)
-        line1 = matplotlib.patches.Polygon([self.p1, self.points_res[0]], fill=False, closed=False, color="green")
-        line2 = matplotlib.patches.Polygon([self.p2, self.points_res[-1]], fill=False, closed=False, color="green")
-        broke_line = matplotlib.patches.Polygon(self.points_res, fill=False, closed=False, color="green")
+        line1 = matplotlib.patches.Polygon([self.p1, self.points_res[0]], fill=False, closed=False, color=color)
+        line2 = matplotlib.patches.Polygon([self.p2, self.points_res[-1]], fill=False, closed=False, color=color)
+        broke_line = matplotlib.patches.Polygon(self.points_res, fill=False, closed=False, color=color)
         ax.add_patch(broke_line)
         ax.add_patch(line1)
         ax.add_patch(line2)
@@ -252,18 +252,18 @@ class CircleTour(Tour):
         super().get_length()
         return self.L
 
-    def draw(self, ax):
+    def draw(self, ax, color="green"):
         super().draw(ax)
         angle1 = np.arctan2(self.tang1[1] - self.center[1], self.tang1[0] - self.center[0])
         angle2 = np.arctan2(self.tang2[1] - self.center[1], self.tang2[0] - self.center[0])
 
         arc = Arc(self.center, 2 * self.r, 2 * self.r, angle=0, theta1=min(np.degrees(angle1), np.degrees(angle2)),
                   theta2=max(np.degrees(angle1), np.degrees(angle2)),
-                  color="green")
+                  color=color)
 
         ax.add_patch(arc)
-        line1 = matplotlib.patches.Polygon([self.id1_p, self.tang1], fill=False, closed=False, color="green")
-        line2 = matplotlib.patches.Polygon([self.id2_p, self.tang2], fill=False, closed=False, color="green")
+        line1 = matplotlib.patches.Polygon([self.id1_p, self.tang1], fill=False, closed=False, color=color)
+        line2 = matplotlib.patches.Polygon([self.id2_p, self.tang2], fill=False, closed=False, color=color)
 
         ax.add_patch(line1)
         ax.add_patch(line2)
@@ -286,6 +286,8 @@ class Read_Json:
             self.circles = self.data["data_forbidden_zone"]
         if ("relief" in self.data.keys()):
             self.polygon = self.data["relief"]
+        self.start_coord = self.data["aeroport_id"]
+        self.number_bpla = self.data["number_bpla"] if "number_bpla" in self.data.keys() else 1
         self.matrix = np.zeros((len(self.KT), len(self.KT)))
         self.path_matrix = [[None] * len(self.KT) for i in range(len(self.KT))]
 
@@ -375,6 +377,8 @@ class Read_Json:
             x1 = self.KT[i]["x"]
             y1 = self.KT[i]["y"]
             id1 = self.KT[i]["id"]
+            if self.start_coord == id1:
+                self.start_coord = i + 1
             self.matrix[i][i] = np.inf
             # ids.append(id1)
             for j in range(0, i):
@@ -445,4 +449,3 @@ class Read_Json:
 
     def get_matrix(self):
         return self.matrix
-
