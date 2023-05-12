@@ -254,14 +254,22 @@ class CircleTour(Tour):
 
     def draw(self, ax, color="green"):
         super().draw(ax)
-        angle1 = np.arctan2(self.tang1[1] - self.center[1], self.tang1[0] - self.center[0])
-        angle2 = np.arctan2(self.tang2[1] - self.center[1], self.tang2[0] - self.center[0])
-        if (angle1 < 0):
-            angle1 += 2*pi
-        if (angle2 < 0):
-            angle2 += 2*pi
-        arc = Arc(self.center, 2 * self.r, 2 * self.r, angle=0, theta1=min(np.degrees(angle1), np.degrees(angle2)),
-                  theta2=max(np.degrees(angle1), np.degrees(angle2)),
+        angle1 = np.arctan2(self.tang1[1] - self.center[1], self.tang1[0] - self.center[0]) % (2*pi)
+        angle2 = np.arctan2(self.tang2[1] - self.center[1], self.tang2[0] - self.center[0]) % (2*pi)
+
+        if (abs(angle1 - angle2) > pi):
+            tmp = angle1
+            angle1 = angle2
+            angle2 = tmp
+
+
+        #if (angle1 > pi):
+        #    angle1 -= 2*pi
+        #if (angle2 > pi):
+        #    angle2 -= 2*pi
+
+        arc = Arc(self.center, 2 * self.r, 2 * self.r, angle=0, theta1=np.degrees(angle1),
+                  theta2=np.degrees(angle2),
                   color=color)
 
         ax.add_patch(arc)
