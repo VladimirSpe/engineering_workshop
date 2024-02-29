@@ -1,0 +1,30 @@
+{
+  "number_bpla": 3,
+  "aeroport_id": 1001,
+  "data_points": [
+    {
+      "id": 0,
+      "x": 0,
+      "y": 0
+    },
+    {
+      "id": 1001,
+      "x": 3,
+      "y": 1
+    },
+    {
+      "id": 1002,
+      "x": 3,
+      "y": 4
+    },
+    {
+      "id": 1003,
+      "x": 6,
+      "y": 0
+    }
+  ],
+  "data_forbidden_zone": [
+  ],
+  "forbidden_lines": [
+  ]
+}

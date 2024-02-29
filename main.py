@@ -1,25 +1,27 @@
 from Inp_Rea import Read_Json
+from Littles_method import Main_Method
 import matplotlib.pyplot as plt
+from matplotlib import colors as mcolors
 
-
-def index_to_coord(vector_list, ind):
-    coord_list_x = []
-    coord_list_y = []
-    for i in vector_list:
-        coord_list_x.append(ind[i[0]][1])
-        coord_list_y.append(ind[i[0]][2])
-    coord_list_x.append(ind[vector_list[0][0]][1])
-    coord_list_y.append(ind[vector_list[0][0]][2])
-    return coord_list_x, coord_list_y
+COLORS = [x for x in list(mcolors.BASE_COLORS.keys()) if x != 'r']
 
 
 def main():
-    mat = Read_Json("inp.json")
-    ff = mat.preparation()
-    coords = [(0, 2), (2, 1), (1, 0)]
-    matrix, indexes = ff[0], ff[1]
-    l_x, l_y = index_to_coord(coords, indexes)
-    plt.plot(l_x, l_y)
+    fig, ax = plt.subplots()
+    geom = Read_Json("tests/test_mtsp2.json")
+    geom.draw(ax)
+    geom.preparation()
+    res = Main_Method("", geom.matrix, geom.start_coord, geom.number_bpla)
+    draw_mat = geom.path_matrix
+    if geom.number_bpla == 1:
+        for path in res.solution_cycle()[0]:
+            draw_mat[int(path[0])][int(path[1])].draw(ax)
+    else:
+        for bpla in range(geom.number_bpla):
+            for path in res.solution_cycle()[0][bpla]:
+                draw_mat[int(path[0])][int(path[1])].draw(ax, COLORS[bpla])
+
+    ax.set_aspect('equal')
     plt.show()
 
 
